@@ -3,6 +3,7 @@ let books = require("./booksdb.js");
 let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
+const axios = require("axios");
 
 public_users.post("/register", (req, res) => {
 	const { username, password } = req.body;
@@ -21,9 +22,21 @@ public_users.post("/register", (req, res) => {
 	return res.status(200).json({ message: "User registered successfully" });
 });
 
-// Get all books (working version)
+// Get all books
 public_users.get("/books", function (req, res) {
 	return res.status(200).json(books);
+});
+
+// Get all books (async version)
+public_users.get("/async/books", async (req, res) => {
+	try {
+		const allBooks = await new Promise((resolve) => {
+			resolve(books);
+		});
+		return res.status(200).json(allBooks);
+	} catch (error) {
+		return res.status(500).json({ message: "Error fetching books" });
+	}
 });
 
 // Get book by ISBN
@@ -35,6 +48,19 @@ public_users.get("/isbn/:isbn", function (req, res) {
 		return res.status(200).json(book);
 	} else {
 		return res.status(404).json({ message: "Book not found" });
+	}
+});
+
+// Get book by ISBN (async version)
+public_users.get("/async/isbn/:isbn", async (req, res) => {
+	try {
+		const book = await new Promise((resolve, reject) => {
+			const isbn = req.params.isbn;
+			books[isbn] ? resolve(books[isbn]) : reject("Book not found");
+		});
+		return res.status(200).json(book);
+	} catch (error) {
+		return res.status(404).json({ message: error });
 	}
 });
 
@@ -58,6 +84,24 @@ public_users.get("/author/:author", function (req, res) {
 	}
 });
 
+// Get books by author (async version)
+public_users.get("/async/author/:author", async (req, res) => {
+	try {
+		const filteredBooks = await new Promise((resolve) => {
+			const author = req.params.author.toLowerCase();
+			const results = Object.values(books).filter((book) =>
+				book.author.toLowerCase().includes(author)
+			);
+			resolve(results);
+		});
+		return filteredBooks.length > 0
+			? res.status(200).json(filteredBooks)
+			: res.status(404).json({ message: "No books found by this author" });
+	} catch (error) {
+		return res.status(500).json({ message: "Error fetching books" });
+	}
+});
+
 // Get books by title
 public_users.get("/title/:title", function (req, res) {
 	const title = req.params.title.toLowerCase();
@@ -75,6 +119,24 @@ public_users.get("/title/:title", function (req, res) {
 		return res
 			.status(404)
 			.json({ message: "No books found with this title" });
+	}
+});
+
+// Get books by title (async version)
+public_users.get("/async/title/:title", async (req, res) => {
+	try {
+		const filteredBooks = await new Promise((resolve) => {
+			const title = req.params.title.toLowerCase();
+			const results = Object.values(books).filter((book) =>
+				book.title.toLowerCase().includes(title)
+			);
+			resolve(results);
+		});
+		return filteredBooks.length > 0
+			? res.status(200).json(filteredBooks)
+			: res.status(404).json({ message: "No books found with this title" });
+	} catch (error) {
+		return res.status(500).json({ message: "Error fetching books" });
 	}
 });
 
